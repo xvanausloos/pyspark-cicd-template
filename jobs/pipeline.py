@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, concat_ws, lit, coalesce
+import pyspark.sql.functions as F
 from typing import Dict, Tuple
 from ddl import schema
 
@@ -56,8 +56,8 @@ def transform(inc_df: DataFrame, prev_df: DataFrame, config: Dict, logger) -> Da
     # calculating the metrics
     inc_df: DataFrame = (inc_df.groupBy('email').count().
                          select(['email',
-                                 col('count').alias('page_view'),
-                                 lit(config['process_date']).alias('last_active')
+                                 F.col('count').alias('page_view'),
+                                 F.lit(config['process_date']).alias('last_active')
                                  ])
                          )
 
@@ -65,16 +65,16 @@ def transform(inc_df: DataFrame, prev_df: DataFrame, config: Dict, logger) -> Da
     df_transformed: DataFrame = (inc_df.join(prev_df,
                                              inc_df.email == prev_df.email,
                                              'full').
-                                 select([coalesce(prev_df.email, inc_df.email).
+                                 select([F.coalesce(prev_df.email, inc_df.email).
                                         alias('email'),
-                                         (coalesce(prev_df.page_view, lit(0))
+                                         (F.coalesce(prev_df.page_view, F.lit(0))
                                           +
-                                          coalesce(inc_df.page_view, lit(0))).
+                                          F.coalesce(inc_df.page_view, F.lit(0))).
                                         alias('page_view'),
-                                         coalesce(prev_df.created_date,
+                                         F.coalesce(prev_df.created_date,
                                                   inc_df.last_active).cast('date').
                                         alias('created_date'),
-                                         coalesce(inc_df.last_active,
+                                         F.coalesce(inc_df.last_active,
                                                   prev_df.last_active).cast('date').
                                         alias('last_active')
                                          ])
